@@ -1997,7 +1997,7 @@
         
         buildDOMStructure(true);
         updateSelectOptions();
-        updateTableValues(currentSatis, currentSatis);
+        updateTableValues(currentAlis, currentSatis);
         toplamHesapla();
         
         DOM.status.style.display = 'none';
@@ -2017,7 +2017,7 @@
               multipliers = newMultipliers;
               buildDOMStructure(true);
               updateSelectOptions();
-              updateTableValues(currentSatis, currentSatis);
+              updateTableValues(currentAlis, currentSatis);
             }
           } catch (e) {
             console.error("Katsayı güncelleme hatası:", e);
@@ -2083,8 +2083,7 @@
         }
       }
       
-      // Altın hesaplamalarının tamamında baz kur olarak currentSatis gönderiliyor
-      updateTableValues(currentSatis, currentSatis);
+      updateTableValues(currentAlis, currentSatis);
       toplamHesapla();
       calculateZekat();
       calculateArbitrage();
@@ -2260,11 +2259,11 @@
       const keys = Object.keys(multipliers);
       if (keys.length === 0) return;
 
-      const roundedKurSatis = roundToNearest10(rawSell);
+      // Kur satırında görüntüde fal ve fsat uygulanmış alış ve satış verisi en yakın onluğa yuvarlanmadan gösterilir
+      applyValueAndFlash('val_kur_buy', fmt2(rawBuy), Number(rawBuy.toFixed(2)));
+      applyValueAndFlash('val_kur_sell', fmt2(rawSell), Number(rawSell.toFixed(2)));
 
-      // Kur satırında alış yerine en yakın onluğa yuvarlanmış kur satışı gösterilir
-      applyValueAndFlash('val_kur_buy', fmt2(roundedKurSatis), Number(roundedKurSatis.toFixed(2)));
-      applyValueAndFlash('val_kur_sell', fmt2(roundedKurSatis), Number(roundedKurSatis.toFixed(2)));
+      const roundedKurSatis = roundToNearest10(rawSell);
 
       const group3AllKeys = keys.slice(10, 19);
       const specialKeys = group3AllKeys.slice(3, 6);
