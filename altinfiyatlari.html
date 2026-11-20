@@ -1937,13 +1937,15 @@
       }
     }
 
-    function parseGoogleSheetsData(values) {
+    function parseGoogleSheetsData(values, settings = socketSettings) {
       if (!Array.isArray(values)) return null;
+      const fal = settings?.fal || 0;
+      const fsat = settings?.fsat || 0;
       if (values[1]) {
         const sheetKurAlis = parseFloat(String(values[1][1]).replace(',', '.'));
         const sheetKurSatis = parseFloat(String(values[1][2]).replace(',', '.'));
-        if (!isNaN(sheetKurAlis) && sheetKurAlis > 0) currentAlis = sheetKurAlis;
-        if (!isNaN(sheetKurSatis) && sheetKurSatis > 0) currentSatis = sheetKurSatis;
+        if (!isNaN(sheetKurAlis) && sheetKurAlis > 0) currentAlis = sheetKurAlis - fal;
+        if (!isNaN(sheetKurSatis) && sheetKurSatis > 0) currentSatis = sheetKurSatis + fsat;
         if (!currentAlis && currentSatis) currentAlis = currentSatis;
         if (!currentSatis && currentAlis) currentSatis = currentAlis;
       }
@@ -1978,7 +1980,7 @@
       if (v[20]?.[1] && DOM.duyur) {
         DOM.duyur.innerHTML = v[20][1];
       }
-      return parseGoogleSheetsData(v);
+      return parseGoogleSheetsData(v, socketSettings);
     }
 
     async function initData() {
@@ -2262,7 +2264,7 @@
       const keys = Object.keys(multipliers);
       if (keys.length === 0) return;
 
-      // Piyasa KUR satırında ayarlar/socketten gelen alış ve satış verileri fal/fsat uygulanmış haliyle olduğu gibi gösterilir
+      // Piyasa KUR satırında ayarlar/socketten gelen alış ve satış verileri fal/fsat uygulanmış haliyle yuvarlanmadan gösterilir
       applyValueAndFlash('val_kur_buy', fmt2(rawBuy), Number(rawBuy.toFixed(2)));
       applyValueAndFlash('val_kur_sell', fmt2(rawSell), Number(rawSell.toFixed(2)));
 
