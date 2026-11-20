@@ -1850,6 +1850,7 @@
     let socket = null;
     window.isLiveSocketActive = false;
     let liveSocketRawData = {};
+    let currentAlis = 0;
     let currentSatis = 0;
     let kurRowAlis = 0;
     let kurRowSatis = 0;
@@ -1943,14 +1944,16 @@
       if (values[1]) {
         const sheetKurAlis = parseFloat(String(values[1][1]).replace(',', '.'));
         const sheetKurSatis = parseFloat(String(values[1][2]).replace(',', '.'));
-        if (!isNaN(sheetKurAlis) && sheetKurAlis > 0) kurRowAlis = roundToNearest10(sheetKurAlis);
+        if (!isNaN(sheetKurAlis) && sheetKurAlis > 0) {
+          currentAlis = sheetKurAlis;
+          kurRowAlis = roundToNearest10(sheetKurAlis);
+        }
         if (!isNaN(sheetKurSatis) && sheetKurSatis > 0) {
-          kurRowSatis = roundToNearest10(sheetKurSatis);
           currentSatis = sheetKurSatis;
+          kurRowSatis = roundToNearest10(sheetKurSatis);
         }
         if (!kurRowAlis && kurRowSatis) kurRowAlis = kurRowSatis;
         if (!kurRowSatis && kurRowAlis) kurRowSatis = kurRowAlis;
-        if (!currentSatis && kurRowSatis) currentSatis = kurRowSatis;
       }
       const products = {};
       for (let i = 0; i < values.length; i++) {
@@ -2002,7 +2005,7 @@
         
         buildDOMStructure(true);
         updateSelectOptions();
-        updateTableValues(kurRowAlis, kurRowSatis);
+        updateTableValues(currentAlis, currentSatis);
         toplamHesapla();
         
         DOM.status.style.display = 'none';
@@ -2026,7 +2029,7 @@
               }
               buildDOMStructure(true);
               updateSelectOptions();
-              updateTableValues(kurRowAlis, kurRowSatis);
+              updateTableValues(currentAlis, currentSatis);
             }
           } catch (e) {
             console.error("Katsayı güncelleme hatası:", e);
@@ -2074,9 +2077,13 @@
       if (data["ALTIN"]) {
         const altinObj = data["ALTIN"];
         const verial = socketSettings.verial || 1;
+        const alis = parseFloat(altinObj.alis) * verial;
         const satis = parseFloat(altinObj.satis) * verial;
+        if (!isNaN(alis) && alis > 0 && !isNaN(satis) && satis > 0) {
+          currentAlis = alis - socketSettings.fal;
+          currentSatis = satis + socketSettings.fsat;
+        }
         if (!isNaN(satis) && satis > 0) {
-          currentSatis = satis;
           kurRowAlis = roundToNearest10(satis - socketSettings.fal);
           kurRowSatis = roundToNearest10(satis + socketSettings.fsat);
         }
@@ -2093,7 +2100,7 @@
         }
       }
       
-      updateTableValues(kurRowAlis, kurRowSatis);
+      updateTableValues(currentAlis, currentSatis);
       toplamHesapla();
       calculateZekat();
       calculateArbitrage();
@@ -2139,8 +2146,8 @@
       if (selectedProductKey === 'KUR') kurTr.classList.add('active-row');
       kurTr.innerHTML = `
         <td style="font-weight: bold;" title="KUR" onclick="window.location.href='arsiv?urun=kur'">KUR</td>
-        <td style="color:#2563eb; font-weight:bold; text-align:center;" title="KUR Alış"><span id="val_kur_buy" class="val_haremalis">0</span></td>
-        <td style="color:#d97706; font-weight:bold; text-align:center;" title="KUR Satış"><span id="val_kur_sell" class="val_haremsatis">0</span></td>
+        <td style="color:#2563eb; font-weight:bold; text-align:center;" title="KUR Alış"><span id="val_kur_buy" class="val_haremalis">0,00</span></td>
+        <td style="color:#d97706; font-weight:bold; text-align:center;" title="KUR Satış"><span id="val_kur_sell" class="val_haremsatis">0,00</span></td>
       `;
       kurTr.addEventListener('click', () => selectProduct('KUR'));
       DOM.marketTableBody.appendChild(kurTr);
@@ -2262,13 +2269,13 @@
       });
     }
 
-    function updateTableValues(roundedKurAlis, roundedKurSatis) {
+    function updateTableValues(rawBuy, rawSell) {
       if (!isDOMBuilt) return;
       const keys = Object.keys(multipliers);
       if (keys.length === 0) return;
 
-      applyValueAndFlash('val_kur_buy', fmt(roundedKurAlis), roundedKurAlis);
-      applyValueAndFlash('val_kur_sell', fmt(roundedKurSatis), roundedKurSatis);
+      applyValueAndFlash('val_kur_buy', fmt2(rawBuy), Number(rawBuy.toFixed(2)));
+      applyValueAndFlash('val_kur_sell', fmt2(rawSell), Number(rawSell.toFixed(2)));
 
       const group3AllKeys = keys.slice(10, 19);
       const specialKeys = group3AllKeys.slice(3, 6);
@@ -2305,20 +2312,20 @@
         }
       });
 
-      updateGroupValues(keys.slice(0, 5), roundedKurAlis, roundedKurSatis, 0);
-      updateGroupValues([...keys.slice(5, 10), keys[12]], roundedKurAlis, roundedKurSatis, 1);
+      updateGroupValues(keys.slice(0, 5), kurRowAlis, kurRowSatis, 0);
+      updateGroupValues([...keys.slice(5, 10), keys[12]], kurRowAlis, kurRowSatis, 1);
 
       const grup3Keys = keys.slice(10, 12);
       if (grup3Keys.length > 0) {
-        updateGroupValues(grup3Keys, roundedKurAlis, roundedKurSatis, 2);
+        updateGroupValues(grup3Keys, kurRowAlis, kurRowSatis, 2);
       }
 
       const baseMultiplierItem = (keys.length >= 2) ? multipliers[keys[1]] : multipliers[keys[0]];
       if (baseMultiplierItem) {
         const multipliersList = [40, 35, 30, 25, 20, 15, 10];
         multipliersList.forEach((m, idx) => {
-          let calcBuy = roundToNearest5(roundedKurAlis * baseMultiplierItem.mAl * m);
-          let calcSell = roundToNearest5(roundedKurSatis * baseMultiplierItem.mSat * m);
+          let calcBuy = roundToNearest5(kurRowAlis * baseMultiplierItem.mAl * m);
+          let calcSell = roundToNearest5(kurRowSatis * baseMultiplierItem.mSat * m);
 
           applyValueAndFlash(`val_g4_${idx}_buy`, fmt(calcBuy), calcBuy);
           applyValueAndFlash(`val_g4_${idx}_sell`, fmt(calcSell), calcSell);
@@ -2406,10 +2413,9 @@
     }
 
     function getUnitPrice(typeKey, isAlis) {
+      if (typeKey === 'KUR') return isAlis ? currentAlis : currentSatis;
+
       const baseKur = isAlis ? kurRowAlis : kurRowSatis;
-
-      if (typeKey === 'KUR') return baseKur;
-
       const keys = Object.keys(multipliers);
 
       if (typeKey === 'USDTRY' || typeKey === 'EURTRY') {
