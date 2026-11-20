@@ -2244,12 +2244,12 @@
       });
     }
 
-    function updateGroupValues(groupKeys, roundedKurAlis, roundedKurSatis, groupIdx) {
+    function updateGroupValues(groupKeys, roundedKurSatis, groupIdx) {
       groupKeys.forEach((k, itemIdx) => {
         const item = multipliers[k];
         if (!item) return;
 
-        let calcBuy = roundedKurAlis * item.mAl;
+        let calcBuy = roundedKurSatis * item.mAl;
         let calcSell = roundedKurSatis * item.mSat;
 
         if (groupIdx === 0) {
@@ -2310,19 +2310,19 @@
         }
       });
 
-      updateGroupValues(keys.slice(0, 5), kurRowAlis, kurRowSatis, 0);
-      updateGroupValues([...keys.slice(5, 10), keys[12]], kurRowAlis, kurRowSatis, 1);
+      updateGroupValues(keys.slice(0, 5), kurRowSatis, 0);
+      updateGroupValues([...keys.slice(5, 10), keys[12]], kurRowSatis, 1);
 
       const grup3Keys = keys.slice(10, 12);
       if (grup3Keys.length > 0) {
-        updateGroupValues(grup3Keys, kurRowAlis, kurRowSatis, 2);
+        updateGroupValues(grup3Keys, kurRowSatis, 2);
       }
 
       const baseMultiplierItem = (keys.length >= 2) ? multipliers[keys[1]] : multipliers[keys[0]];
       if (baseMultiplierItem) {
         const multipliersList = [40, 35, 30, 25, 20, 15, 10];
         multipliersList.forEach((m, idx) => {
-          let calcBuy = roundToNearest5(kurRowAlis * baseMultiplierItem.mAl * m);
+          let calcBuy = roundToNearest5(kurRowSatis * baseMultiplierItem.mAl * m);
           let calcSell = roundToNearest5(kurRowSatis * baseMultiplierItem.mSat * m);
 
           applyValueAndFlash(`val_g4_${idx}_buy`, fmt(calcBuy), calcBuy);
@@ -2669,7 +2669,7 @@
         if (triggered) {
           alarm.active = false;
           localStorage.setItem('bingol_alarms', JSON.stringify(priceAlarms));
-          const itemName = alarm.code === 'KUR' ? 'KUR' : (multipliers[alarm.code]?.name || alarm.code);
+          const itemName = alarm.code === 'KUR' ? 'KUR' : (multipliers[alarm.code]?.name || a.code);
           const typeLabel = isAlis ? 'alış' : 'satış';
           const condText = alarm.direction === 'above' ? 'üstüne çıktı' : 'altına indi';
           const msg = `${itemName} ${typeLabel} fiyatı ${fmt2(currentPrice)} TL ile hedef seviyenin ${condText}!`;
