@@ -1669,7 +1669,7 @@
 
       if (priceChart && priceChart.data && priceChart.data.datasets.length >= 2) {
         const selectedProd = selectedProductKey === 'KUR' ? null : multipliers[selectedProductKey];
-        const calcAlis = selectedProd ? h_al * selectedProd.mAl : h_al;
+        const calcAlis = selectedProd ? h_sat * selectedProd.mAl : h_sat;
         const calcSatis = selectedProd ? h_sat * selectedProd.mSat : h_sat;
 
         const labelStr = (currentRange === 'today') ? timeStr : `${currentDate} ${timeStr}`;
@@ -1704,7 +1704,7 @@
       if (selectedProductKey === 'KUR') kurTr.classList.add('active-row');
       kurTr.innerHTML = `
         <td style="font-weight: bold;" title="KUR">KUR</td>
-        <td style="color:#2563eb; font-weight:bold;">${fmt(rawBuy)}</td>
+        <td style="color:#2563eb; font-weight:bold;">${fmt(rawSell)}</td>
         <td style="color:#d97706; font-weight:bold;">${fmt(rawSell)}</td>
       `;
       kurTr.addEventListener('click', () => selectProduct('KUR'));
@@ -1712,7 +1712,7 @@
 
       Object.keys(multipliers).forEach(key => {
         const item = multipliers[key];
-        const calculatedBuy = rawBuy * item.mAl;
+        const calculatedBuy = rawSell * item.mAl;
         const calculatedSell = rawSell * item.mSat;
         const tr = document.createElement('tr');
         if (key === selectedProductKey) tr.classList.add('active-row');
@@ -1776,10 +1776,10 @@
       const cardProdName = (selectedProductKey === 'KUR') ? 'Altın Piyasası' : getSelectedProductName();
       const timePart = timeStr ? ` Saat ${timeStr}` : '';
       
-      let currentBuy = rawBuy;
+      let currentBuy = rawSell;
       let currentSell = rawSell;
       if (selectedProductKey !== 'KUR' && multipliers[selectedProductKey]) {
-        currentBuy = rawBuy * multipliers[selectedProductKey].mAl;
+        currentBuy = rawSell * multipliers[selectedProductKey].mAl;
         currentSell = rawSell * multipliers[selectedProductKey].mSat;
       }
 
@@ -1792,10 +1792,10 @@
       let dayBuyVals = [];
       let daySellVals = [];
       daySlice.forEach(item => {
-        let b = parseFloat(String(item.alis || item.buy || item.Alis || 0).replace(',', '.'));
         let s = parseFloat(String(item.satis || item.sell || item.Satis || 0).replace(',', '.'));
+        let b = s;
         if (selectedProductKey !== 'KUR' && multipliers[selectedProductKey]) {
-          b = b * multipliers[selectedProductKey].mAl;
+          b = s * multipliers[selectedProductKey].mAl;
           s = s * multipliers[selectedProductKey].mSat;
         }
         if (b > 0) dayBuyVals.push(b);
@@ -2044,13 +2044,13 @@
       let satisData = [];
       if (selectedProductKey === 'KUR') {
         chartDisplayTitle = `KUR Fiyat Trend Grafiği`;
-        alisData = sliceData.map(item => parseFloat(String(item.alis || item.buy || item.Alis || 0).replace(',', '.')));
+        alisData = sliceData.map(item => parseFloat(String(item.satis || item.sell || item.Satis || 0).replace(',', '.')));
         satisData = sliceData.map(item => parseFloat(String(item.satis || item.sell || item.Satis || 0).replace(',', '.')));
       } else {
         const selectedProd = multipliers[selectedProductKey];
         if (!selectedProd) return;
         chartDisplayTitle = `${selectedProd.name} Fiyat Trend Grafiği`;
-        alisData = sliceData.map(item => parseFloat(String(item.alis || item.buy || item.Alis || 0).replace(',', '.')) * selectedProd.mAl);
+        alisData = sliceData.map(item => parseFloat(String(item.satis || item.sell || item.Satis || 0).replace(',', '.')) * selectedProd.mAl);
         satisData = sliceData.map(item => parseFloat(String(item.satis || item.sell || item.Satis || 0).replace(',', '.')) * selectedProd.mSat);
       }
       if(chartTitle) chartTitle.innerText = chartDisplayTitle;
@@ -2182,10 +2182,10 @@
     }
 
     function getUnitPrice(typeKey, isAlis) {
-      if (typeKey === 'KUR') return isAlis ? activeRawBuy : activeRawSell;
+      if (typeKey === 'KUR') return activeRawSell;
       const item = multipliers[typeKey];
       if (!item) return 0;
-      return isAlis ? (activeRawBuy * item.mAl) : (activeRawSell * item.mSat);
+      return isAlis ? (activeRawSell * item.mAl) : (activeRawSell * item.mSat);
     }
 
     let globalCalcTotalTL = 0;
@@ -2400,7 +2400,7 @@
         if (triggered) {
           alarm.active = false;
           localStorage.setItem('bingol_alarms', JSON.stringify(priceAlarms));
-          const itemName = alarm.code === 'KUR' ? 'KUR' : (multipliers[alarm.code]?.name || alarm.code);
+          const itemName = alarm.code === 'KUR' ? 'KUR' : (multipliers[alarm.code]?.name || a.code);
           const typeLabel = isAlis ? 'alış' : 'satış';
           const condText = alarm.direction === 'above' ? 'üstüne çıktı' : 'altına indi';
           const msg = `${itemName} ${typeLabel} fiyatı ${fmt2(currentPrice)} TL ile hedef seviyenin ${condText}!`;
