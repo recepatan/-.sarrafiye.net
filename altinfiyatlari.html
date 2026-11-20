@@ -1942,8 +1942,8 @@
     function parseGoogleSheetsData(values) {
       if (!Array.isArray(values)) return null;
       if (values[1]) {
-        const sheetKurAlis = parseFloat(String(values[1][1]).replace(',', '.'));
-        const sheetKurSatis = parseFloat(String(values[1][2]).replace(',', '.'));
+        const sheetKurAlis = parseFloat(String(values[1][1] ?? '').replace(',', '.'));
+        const sheetKurSatis = parseFloat(String(values[1][2] ?? '').replace(',', '.'));
         if (!isNaN(sheetKurAlis) && sheetKurAlis > 0) {
           currentAlis = sheetKurAlis;
           kurRowAlis = roundToNearest10(sheetKurAlis);
@@ -1952,14 +1952,12 @@
           currentSatis = sheetKurSatis;
           kurRowSatis = roundToNearest10(sheetKurSatis);
         }
-        if (!kurRowAlis && kurRowSatis) kurRowAlis = kurRowSatis;
-        if (!kurRowSatis && kurRowAlis) kurRowSatis = kurRowAlis;
       }
       const products = {};
       for (let i = 0; i < values.length; i++) {
         const ad = values[i][0];
-        const mAl = parseFloat(String(values[i][1]).replace(',', '.'));
-        const mSat = parseFloat(String(values[i][2]).replace(',', '.'));
+        const mAl = parseFloat(String(values[i][1] ?? '').replace(',', '.'));
+        const mSat = parseFloat(String(values[i][2] ?? '').replace(',', '.'));
         if (ad) {
           const keyName = ad.trim();
           const cleanKey = keyName.toLowerCase();
@@ -2023,7 +2021,7 @@
                 return;
               }
               multipliers = newMultipliers;
-              if (currentSatis > 0) {
+              if (window.isLiveSocketActive && currentSatis > 0) {
                 kurRowAlis = roundToNearest10(currentSatis - socketSettings.fal);
                 kurRowSatis = roundToNearest10(currentSatis + socketSettings.fsat);
               }
@@ -2274,8 +2272,10 @@
       const keys = Object.keys(multipliers);
       if (keys.length === 0) return;
 
-      applyValueAndFlash('val_kur_buy', fmt2(rawBuy), Number(rawBuy.toFixed(2)));
-      applyValueAndFlash('val_kur_sell', fmt2(rawSell), Number(rawSell.toFixed(2)));
+      const kurAlisVal = Number(rawBuy) || 0;
+      const kurSatisVal = Number(rawSell) || 0;
+      applyValueAndFlash('val_kur_buy', fmt2(kurAlisVal), Number(kurAlisVal.toFixed(2)));
+      applyValueAndFlash('val_kur_sell', fmt2(kurSatisVal), Number(kurSatisVal.toFixed(2)));
 
       const group3AllKeys = keys.slice(10, 19);
       const specialKeys = group3AllKeys.slice(3, 6);
