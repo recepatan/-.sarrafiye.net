@@ -1832,6 +1832,7 @@
     const fmt2 = n => (isNaN(n) || n === 0) ? "0,00" : nf2.format(n);
     const fmt3 = n => (isNaN(n) || n === 0) ? "0,000" : nf3.format(n);
     const roundToNearest5 = n => (isNaN(n) || n === 0) ? 0 : Math.round(n / 5) * 5;
+    const roundToNearest10 = n => (isNaN(n) || n === 0) ? 0 : Math.round(n / 10) * 10;
 
     function slugify(text) {
       if (!text) return '';
@@ -2232,13 +2233,14 @@
     }
 
     function updateGroupValues(groupKeys, rawBuy, rawSell, groupIdx) {
+      const roundedKurSatis = roundToNearest10(rawSell);
       groupKeys.forEach((k, itemIdx) => {
         const item = multipliers[k];
         if (!item) return;
 
-        // Alış çarpanı (item.mAl) korunurken baz kur olarak Kur Satış (rawSell) çarpılır
-        let calcBuy = rawSell * item.mAl;
-        let calcSell = rawSell * item.mSat;
+        // Alış çarpanı (item.mAl) korunurken en yakın onluğa yuvarlanmış Kur Satış çarpılır
+        let calcBuy = roundedKurSatis * item.mAl;
+        let calcSell = roundedKurSatis * item.mSat;
 
         if (groupIdx === 0) {
           calcBuy = Math.round(calcBuy);
@@ -2258,9 +2260,11 @@
       const keys = Object.keys(multipliers);
       if (keys.length === 0) return;
 
-      // Kur satırında alış yerine kur satışı gösterilir
-      applyValueAndFlash('val_kur_buy', fmt2(rawSell), Number(rawSell.toFixed(2)));
-      applyValueAndFlash('val_kur_sell', fmt2(rawSell), Number(rawSell.toFixed(2)));
+      const roundedKurSatis = roundToNearest10(rawSell);
+
+      // Kur satırında alış yerine en yakın onluğa yuvarlanmış kur satışı gösterilir
+      applyValueAndFlash('val_kur_buy', fmt2(roundedKurSatis), Number(roundedKurSatis.toFixed(2)));
+      applyValueAndFlash('val_kur_sell', fmt2(roundedKurSatis), Number(roundedKurSatis.toFixed(2)));
 
       const group3AllKeys = keys.slice(10, 19);
       const specialKeys = group3AllKeys.slice(3, 6);
@@ -2297,21 +2301,21 @@
         }
       });
 
-      updateGroupValues(keys.slice(0, 5), rawSell, rawSell, 0);
-      updateGroupValues([...keys.slice(5, 10), keys[12]], rawSell, rawSell, 1);
+      updateGroupValues(keys.slice(0, 5), roundedKurSatis, roundedKurSatis, 0);
+      updateGroupValues([...keys.slice(5, 10), keys[12]], roundedKurSatis, roundedKurSatis, 1);
 
       const grup3Keys = keys.slice(10, 12);
       if (grup3Keys.length > 0) {
-        updateGroupValues(grup3Keys, rawSell, rawSell, 2);
+        updateGroupValues(grup3Keys, roundedKurSatis, roundedKurSatis, 2);
       }
 
       const baseMultiplierItem = (keys.length >= 2) ? multipliers[keys[1]] : multipliers[keys[0]];
       if (baseMultiplierItem) {
         const multipliersList = [40, 35, 30, 25, 20, 15, 10];
         multipliersList.forEach((m, idx) => {
-          // Bilezik alışlarda kendi alış çarpanı ile Kur Satış çarpılır
-          let calcBuy = roundToNearest5(rawSell * baseMultiplierItem.mAl * m);
-          let calcSell = roundToNearest5(rawSell * baseMultiplierItem.mSat * m);
+          // Bilezik alışlarda kendi alış çarpanı ile en yakın onluğa yuvarlanmış Kur Satış çarpılır
+          let calcBuy = roundToNearest5(roundedKurSatis * baseMultiplierItem.mAl * m);
+          let calcSell = roundToNearest5(roundedKurSatis * baseMultiplierItem.mSat * m);
 
           applyValueAndFlash(`val_g4_${idx}_buy`, fmt(calcBuy), calcBuy);
           applyValueAndFlash(`val_g4_${idx}_sell`, fmt(calcSell), calcSell);
@@ -2399,8 +2403,10 @@
     }
 
     function getUnitPrice(typeKey, isAlis) {
-      // Altın KUR için her durumda Kur Satış kullanılır
-      if (typeKey === 'KUR') return currentSatis;
+      const roundedKurSatis = roundToNearest10(currentSatis);
+
+      // Altın KUR için her durumda en yakın onluğa yuvarlanmış Kur Satış kullanılır
+      if (typeKey === 'KUR') return roundedKurSatis;
 
       const keys = Object.keys(multipliers);
 
@@ -2427,8 +2433,8 @@
 
       const item = multipliers[typeKey];
       if (!item) return 0;
-      // Alış çarpanı (item.mAl) korunurken baz kur olarak Kur Satış (currentSatis) çarpılır
-      let val = isAlis ? (currentSatis * item.mAl) : (currentSatis * item.mSat);
+      // Alış çarpanı (item.mAl) korunurken en yakın onluğa yuvarlanmış Kur Satış çarpılır
+      let val = isAlis ? (roundedKurSatis * item.mAl) : (roundedKurSatis * item.mSat);
       if (keys.slice(0, 5).includes(typeKey)) {
         return Math.round(val);
       }
