@@ -1850,7 +1850,7 @@
     let socket = null;
     window.isLiveSocketActive = false;
     let liveSocketRawData = {};
-    let currentAlis = 0;
+    let settingsKurAlis = 0;
     let currentSatis = 0;
     const prevPrices = new Map();
     let isDOMBuilt = false;
@@ -1937,17 +1937,15 @@
       }
     }
 
-    function parseGoogleSheetsData(values, settings = socketSettings) {
+    function parseGoogleSheetsData(values) {
       if (!Array.isArray(values)) return null;
-      const fal = settings?.fal || 0;
-      const fsat = settings?.fsat || 0;
       if (values[1]) {
         const sheetKurAlis = parseFloat(String(values[1][1]).replace(',', '.'));
         const sheetKurSatis = parseFloat(String(values[1][2]).replace(',', '.'));
-        if (!isNaN(sheetKurAlis) && sheetKurAlis > 0) currentAlis = sheetKurAlis - fal;
-        if (!isNaN(sheetKurSatis) && sheetKurSatis > 0) currentSatis = sheetKurSatis + fsat;
-        if (!currentAlis && currentSatis) currentAlis = currentSatis;
-        if (!currentSatis && currentAlis) currentSatis = currentAlis;
+        if (!isNaN(sheetKurAlis) && sheetKurAlis > 0) settingsKurAlis = sheetKurAlis;
+        if (!isNaN(sheetKurSatis) && sheetKurSatis > 0) currentSatis = sheetKurSatis;
+        if (!settingsKurAlis && currentSatis) settingsKurAlis = currentSatis;
+        if (!currentSatis && settingsKurAlis) currentSatis = settingsKurAlis;
       }
       const products = {};
       for (let i = 0; i < values.length; i++) {
@@ -1980,7 +1978,7 @@
       if (v[20]?.[1] && DOM.duyur) {
         DOM.duyur.innerHTML = v[20][1];
       }
-      return parseGoogleSheetsData(v, socketSettings);
+      return parseGoogleSheetsData(v);
     }
 
     async function initData() {
@@ -1999,7 +1997,7 @@
         
         buildDOMStructure(true);
         updateSelectOptions();
-        updateTableValues(currentAlis, currentSatis);
+        updateTableValues(settingsKurAlis, currentSatis);
         toplamHesapla();
         
         DOM.status.style.display = 'none';
@@ -2019,7 +2017,7 @@
               multipliers = newMultipliers;
               buildDOMStructure(true);
               updateSelectOptions();
-              updateTableValues(currentAlis, currentSatis);
+              updateTableValues(settingsKurAlis, currentSatis);
             }
           } catch (e) {
             console.error("Katsayı güncelleme hatası:", e);
@@ -2067,11 +2065,7 @@
       if (data["ALTIN"]) {
         const altinObj = data["ALTIN"];
         const verial = socketSettings.verial || 1;
-        const alis = parseFloat(altinObj.alis) * verial;
         const satis = parseFloat(altinObj.satis) * verial;
-        if (!isNaN(alis) && alis > 0) {
-          currentAlis = alis - socketSettings.fal;
-        }
         if (!isNaN(satis) && satis > 0) {
           currentSatis = satis + socketSettings.fsat;
         }
@@ -2088,7 +2082,7 @@
         }
       }
       
-      updateTableValues(currentAlis, currentSatis);
+      updateTableValues(settingsKurAlis, currentSatis);
       toplamHesapla();
       calculateZekat();
       calculateArbitrage();
@@ -2264,7 +2258,7 @@
       const keys = Object.keys(multipliers);
       if (keys.length === 0) return;
 
-      // Piyasa KUR satırında ayarlar/socketten gelen alış ve satış verileri fal/fsat uygulanmış haliyle yuvarlanmadan gösterilir
+      // Piyasa KUR satırında alış ayarlardaki alış, satış ise socketten gelen (fsat uygulanmış) satış olarak gösterilir
       applyValueAndFlash('val_kur_buy', fmt2(rawBuy), Number(rawBuy.toFixed(2)));
       applyValueAndFlash('val_kur_sell', fmt2(rawSell), Number(rawSell.toFixed(2)));
 
