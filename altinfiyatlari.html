@@ -1850,7 +1850,6 @@
     let socket = null;
     window.isLiveSocketActive = false;
     let liveSocketRawData = {};
-    let currentAlis = 0;
     let currentSatis = 0;
     let kurRowAlis = 0;
     let kurRowSatis = 0;
@@ -1944,12 +1943,14 @@
       if (values[1]) {
         const sheetKurAlis = parseFloat(String(values[1][1]).replace(',', '.'));
         const sheetKurSatis = parseFloat(String(values[1][2]).replace(',', '.'));
-        if (!isNaN(sheetKurAlis) && sheetKurAlis > 0) currentAlis = sheetKurAlis;
-        if (!isNaN(sheetKurSatis) && sheetKurSatis > 0) currentSatis = sheetKurSatis;
-        if (!currentAlis && currentSatis) currentAlis = currentSatis;
-        if (!currentSatis && currentAlis) currentSatis = currentAlis;
-        kurRowAlis = currentAlis;
-        kurRowSatis = currentSatis;
+        if (!isNaN(sheetKurAlis) && sheetKurAlis > 0) kurRowAlis = sheetKurAlis;
+        if (!isNaN(sheetKurSatis) && sheetKurSatis > 0) {
+          kurRowSatis = sheetKurSatis;
+          currentSatis = sheetKurSatis;
+        }
+        if (!kurRowAlis && kurRowSatis) kurRowAlis = kurRowSatis;
+        if (!kurRowSatis && kurRowAlis) kurRowSatis = kurRowAlis;
+        if (!currentSatis && kurRowSatis) currentSatis = kurRowSatis;
       }
       const products = {};
       for (let i = 0; i < values.length; i++) {
@@ -2072,7 +2073,6 @@
         const alis = parseFloat(altinObj.alis) * verial;
         const satis = parseFloat(altinObj.satis) * verial;
         if (!isNaN(alis) && alis > 0 && !isNaN(satis) && satis > 0) {
-          currentAlis = alis;
           currentSatis = satis;
           kurRowAlis = alis + socketSettings.fal;
           kurRowSatis = satis + socketSettings.fsat;
@@ -2703,4 +2703,3 @@
   </script>
 </body>
 </html>
-
