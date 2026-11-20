@@ -1966,7 +1966,7 @@
     }
 
     async function loadSheetData() {
-      const res = await fetch(`https://ayarlar.elazig.sarrafiye.net/elazig`, { cache: 'no-cache' });
+      const res = await fetch(`https://ayarlar.bingolder.com/elazig`, { cache: 'no-cache' });
       if (!res.ok) throw new Error('Katsayı verisi bulunamadı.');
       const sheetJson = await res.json();
       const v = sheetJson.values;
