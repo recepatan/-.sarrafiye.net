@@ -1129,7 +1129,7 @@
             })();
           </script>
           
-          <!-- Yeni Tema Duyarlı Suluboya Paleti Bölümü (Dark/Light butonunun soluna alındı) -->
+          <!-- Yeni Tema Duyarlı Suluboya Paleti Bölümü -->
           <div class="palette-wrapper">
             <button class="palette-toggle-btn" onclick="togglePaletteMenu(event)" title="Tema Renk Paleti">
               <i class="bi bi-palette"></i>
@@ -1943,9 +1943,9 @@
       if (values[1]) {
         const sheetKurAlis = parseFloat(String(values[1][1]).replace(',', '.'));
         const sheetKurSatis = parseFloat(String(values[1][2]).replace(',', '.'));
-        if (!isNaN(sheetKurAlis) && sheetKurAlis > 0) kurRowAlis = sheetKurAlis;
+        if (!isNaN(sheetKurAlis) && sheetKurAlis > 0) kurRowAlis = roundToNearest10(sheetKurAlis);
         if (!isNaN(sheetKurSatis) && sheetKurSatis > 0) {
-          kurRowSatis = sheetKurSatis;
+          kurRowSatis = roundToNearest10(sheetKurSatis);
           currentSatis = sheetKurSatis;
         }
         if (!kurRowAlis && kurRowSatis) kurRowAlis = kurRowSatis;
@@ -2002,7 +2002,7 @@
         
         buildDOMStructure(true);
         updateSelectOptions();
-        updateTableValues(kurRowAlis, kurRowSatis, currentSatis);
+        updateTableValues(kurRowAlis, kurRowSatis);
         toplamHesapla();
         
         DOM.status.style.display = 'none';
@@ -2020,9 +2020,13 @@
                 return;
               }
               multipliers = newMultipliers;
+              if (currentSatis > 0) {
+                kurRowAlis = roundToNearest10(currentSatis - socketSettings.fal);
+                kurRowSatis = roundToNearest10(currentSatis + socketSettings.fsat);
+              }
               buildDOMStructure(true);
               updateSelectOptions();
-              updateTableValues(kurRowAlis, kurRowSatis, currentSatis);
+              updateTableValues(kurRowAlis, kurRowSatis);
             }
           } catch (e) {
             console.error("Katsayı güncelleme hatası:", e);
@@ -2070,12 +2074,11 @@
       if (data["ALTIN"]) {
         const altinObj = data["ALTIN"];
         const verial = socketSettings.verial || 1;
-        const alis = parseFloat(altinObj.alis) * verial;
         const satis = parseFloat(altinObj.satis) * verial;
-        if (!isNaN(alis) && alis > 0 && !isNaN(satis) && satis > 0) {
+        if (!isNaN(satis) && satis > 0) {
           currentSatis = satis;
-          kurRowAlis = alis + socketSettings.fal;
-          kurRowSatis = satis + socketSettings.fsat;
+          kurRowAlis = roundToNearest10(satis - socketSettings.fal);
+          kurRowSatis = roundToNearest10(satis + socketSettings.fsat);
         }
       }
       
@@ -2090,7 +2093,7 @@
         }
       }
       
-      updateTableValues(kurRowAlis, kurRowSatis, currentSatis);
+      updateTableValues(kurRowAlis, kurRowSatis);
       toplamHesapla();
       calculateZekat();
       calculateArbitrage();
@@ -2136,8 +2139,8 @@
       if (selectedProductKey === 'KUR') kurTr.classList.add('active-row');
       kurTr.innerHTML = `
         <td style="font-weight: bold;" title="KUR" onclick="window.location.href='arsiv?urun=kur'">KUR</td>
-        <td style="color:#2563eb; font-weight:bold; text-align:center;" title="KUR Alış"><span id="val_kur_buy" class="val_haremalis">0,00</span></td>
-        <td style="color:#d97706; font-weight:bold; text-align:center;" title="KUR Satış"><span id="val_kur_sell" class="val_haremsatis">0,00</span></td>
+        <td style="color:#2563eb; font-weight:bold; text-align:center;" title="KUR Alış"><span id="val_kur_buy" class="val_haremalis">0</span></td>
+        <td style="color:#d97706; font-weight:bold; text-align:center;" title="KUR Satış"><span id="val_kur_sell" class="val_haremsatis">0</span></td>
       `;
       kurTr.addEventListener('click', () => selectProduct('KUR'));
       DOM.marketTableBody.appendChild(kurTr);
@@ -2238,12 +2241,12 @@
       });
     }
 
-    function updateGroupValues(groupKeys, roundedKurSatis, groupIdx) {
+    function updateGroupValues(groupKeys, roundedKurAlis, roundedKurSatis, groupIdx) {
       groupKeys.forEach((k, itemIdx) => {
         const item = multipliers[k];
         if (!item) return;
 
-        let calcBuy = roundedKurSatis * item.mAl;
+        let calcBuy = roundedKurAlis * item.mAl;
         let calcSell = roundedKurSatis * item.mSat;
 
         if (groupIdx === 0) {
@@ -2259,15 +2262,13 @@
       });
     }
 
-    function updateTableValues(displayKurBuy, displayKurSell, rawSatis) {
+    function updateTableValues(roundedKurAlis, roundedKurSatis) {
       if (!isDOMBuilt) return;
       const keys = Object.keys(multipliers);
       if (keys.length === 0) return;
 
-      applyValueAndFlash('val_kur_buy', fmt2(displayKurBuy), Number(displayKurBuy.toFixed(2)));
-      applyValueAndFlash('val_kur_sell', fmt2(displayKurSell), Number(displayKurSell.toFixed(2)));
-
-      const roundedKurSatis = roundToNearest10(rawSatis);
+      applyValueAndFlash('val_kur_buy', fmt(roundedKurAlis), roundedKurAlis);
+      applyValueAndFlash('val_kur_sell', fmt(roundedKurSatis), roundedKurSatis);
 
       const group3AllKeys = keys.slice(10, 19);
       const specialKeys = group3AllKeys.slice(3, 6);
@@ -2304,19 +2305,19 @@
         }
       });
 
-      updateGroupValues(keys.slice(0, 5), roundedKurSatis, 0);
-      updateGroupValues([...keys.slice(5, 10), keys[12]], roundedKurSatis, 1);
+      updateGroupValues(keys.slice(0, 5), roundedKurAlis, roundedKurSatis, 0);
+      updateGroupValues([...keys.slice(5, 10), keys[12]], roundedKurAlis, roundedKurSatis, 1);
 
       const grup3Keys = keys.slice(10, 12);
       if (grup3Keys.length > 0) {
-        updateGroupValues(grup3Keys, roundedKurSatis, 2);
+        updateGroupValues(grup3Keys, roundedKurAlis, roundedKurSatis, 2);
       }
 
       const baseMultiplierItem = (keys.length >= 2) ? multipliers[keys[1]] : multipliers[keys[0]];
       if (baseMultiplierItem) {
         const multipliersList = [40, 35, 30, 25, 20, 15, 10];
         multipliersList.forEach((m, idx) => {
-          let calcBuy = roundToNearest5(roundedKurSatis * baseMultiplierItem.mAl * m);
+          let calcBuy = roundToNearest5(roundedKurAlis * baseMultiplierItem.mAl * m);
           let calcSell = roundToNearest5(roundedKurSatis * baseMultiplierItem.mSat * m);
 
           applyValueAndFlash(`val_g4_${idx}_buy`, fmt(calcBuy), calcBuy);
@@ -2405,9 +2406,9 @@
     }
 
     function getUnitPrice(typeKey, isAlis) {
-      const roundedKurSatis = roundToNearest10(currentSatis);
+      const baseKur = isAlis ? kurRowAlis : kurRowSatis;
 
-      if (typeKey === 'KUR') return roundedKurSatis;
+      if (typeKey === 'KUR') return baseKur;
 
       const keys = Object.keys(multipliers);
 
@@ -2434,7 +2435,7 @@
 
       const item = multipliers[typeKey];
       if (!item) return 0;
-      let val = roundedKurSatis * (isAlis ? item.mAl : item.mSat);
+      let val = baseKur * (isAlis ? item.mAl : item.mSat);
       if (keys.slice(0, 5).includes(typeKey)) {
         return Math.round(val);
       }
@@ -2664,7 +2665,7 @@
         if (triggered) {
           alarm.active = false;
           localStorage.setItem('elazig_alarms', JSON.stringify(priceAlarms));
-          const itemName = alarm.code === 'KUR' ? 'KUR' : (multipliers[a.code]?.name || a.code);
+          const itemName = alarm.code === 'KUR' ? 'KUR' : (multipliers[alarm.code]?.name || alarm.code);
           const typeLabel = isAlis ? 'alış' : 'satış';
           const condText = alarm.direction === 'above' ? 'üstüne çıktı' : 'altına indi';
           const msg = `${itemName} ${typeLabel} fiyatı ${fmt2(currentPrice)} TL ile hedef seviyenin ${condText}!`;
