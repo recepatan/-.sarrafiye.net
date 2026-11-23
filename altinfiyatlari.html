@@ -7,7 +7,7 @@
 <title id="pageMetaTitle">Altın Fiyatları Arşivi</title>        
 <link href="favicon.ico" rel="icon" type="image/x-icon"/>
 <link rel="canonical" id="canonicalUrl" href=""/>
-<meta content="#fd3a13" name="theme-color"/>
+<meta content="#5c1a1b" name="theme-color"/>
 <meta content="Kuyumcu esnaflarından derlenen altın fiyatları arşivi için web sitemizi ziyaret edebilirsiniz." id="metaDescription" name="description"/>
 <meta property="og:locale" content="tr_TR"/>
 <meta property="og:type" content="website"/>
@@ -52,7 +52,7 @@
   .blink-dot { height: 8px; width: 8px; background-color: #2ecc71; border-radius: 50%; display: inline-block; margin-right: 8px; animation: blinker 1.5s linear infinite; }
   @keyframes blinker { 50% { opacity: 0; } }
   .cookie-choices-info{display:none !important;}
-  :root{--main:#008a07;--border:#ffa500;}
+  :root{--main:#5c1a1b;--border:#f59e0b;}
   *{box-sizing:border-box;margin:0;padding:0;}
   
   html,body{width:100%;min-height:100vh;overflow-x:hidden;}
@@ -646,13 +646,13 @@
                        <i class="bi bi-palette"></i>
                      </button>
                      <div id="paletteDropdown" class="palette-dropdown">
+                       <div class="dot" style="background:#5c1a1b" onclick="setT('#5c1a1b','#f59e0b')" title="Koyu Bordo & Kehribar (Varsayılan)"></div>
                        <div class="dot" style="background:#008a07" onclick="setT('#008a07','#ffa500')" title="Zümrüt Yeşili"></div>
                        <div class="dot" style="background:#b22222" onclick="setT('#b22222','#ffd700')" title="Yakut Kırmızısı"></div>
                        <div class="dot" style="background:#4b0082" onclick="setT('#4b0082','#da70d6')" title="Kraliyet Moru"></div>
                        <div class="dot" style="background:#444" onclick="setT('#444','#888')" title="Antrasit Gri"></div>
                        <div class="dot" style="background:#0f3460" onclick="setT('#0f3460','#38bdf8')" title="Gece Laciverti"></div>
                        <div class="dot" style="background:#0d5c63" onclick="setT('#0d5c63','#2dd4bf')" title="Petrol Turkuazı"></div>
-                       <div class="dot" style="background:#5c1a1b" onclick="setT('#5c1a1b','#f59e0b')" title="Koyu Bordo & Kehribar"></div>
                      </div>
                    </div>
 
@@ -1025,6 +1025,8 @@
     function setT(mainColor, borderColor) { 
         document.documentElement.style.setProperty('--main', mainColor); 
         document.documentElement.style.setProperty('--border', borderColor); 
+        const themeMeta = document.querySelector('meta[name="theme-color"]');
+        if (themeMeta) themeMeta.setAttribute('content', mainColor);
         localStorage.setItem('secilen_ana_renk', mainColor);
         localStorage.setItem('secilen_kenar_renk', borderColor);
         document.getElementById('paletteDropdown')?.classList.remove('show');
@@ -1343,12 +1345,13 @@
     const currentCityDisplayName = cityNamesMap[currentCitySlug] || (currentCitySlug.charAt(0).toUpperCase() + currentCitySlug.slice(1));
 
     document.addEventListener('DOMContentLoaded', () => {
-      var kayitliAnaRenk = localStorage.getItem('secilen_ana_renk');
-      var kayitliKenarRenk = localStorage.getItem('secilen_kenar_renk');
-      if (kayitliAnaRenk && kayitliKenarRenk) {
-          document.documentElement.style.setProperty('--main', kayitliAnaRenk);
-          document.documentElement.style.setProperty('--border', kayitliKenarRenk);
-      }
+      var kayitliAnaRenk = localStorage.getItem('secilen_ana_renk') || '#5c1a1b';
+      var kayitliKenarRenk = localStorage.getItem('secilen_kenar_renk') || '#f59e0b';
+      document.documentElement.style.setProperty('--main', kayitliAnaRenk);
+      document.documentElement.style.setProperty('--border', kayitliKenarRenk);
+      const themeMeta = document.querySelector('meta[name="theme-color"]');
+      if (themeMeta) themeMeta.setAttribute('content', kayitliAnaRenk);
+
       var geceModuDurumu = localStorage.getItem('gece_modu');
       if (geceModuDurumu === 'kapali') {
           document.body.classList.remove('dark-mode');
@@ -2400,7 +2403,7 @@
         if (triggered) {
           alarm.active = false;
           localStorage.setItem('bingol_alarms', JSON.stringify(priceAlarms));
-          const itemName = alarm.code === 'KUR' ? 'KUR' : (multipliers[alarm.code]?.name || a.code);
+          const itemName = alarm.code === 'KUR' ? 'KUR' : (multipliers[alarm.code]?.name || alarm.code);
           const typeLabel = isAlis ? 'alış' : 'satış';
           const condText = alarm.direction === 'above' ? 'üstüne çıktı' : 'altına indi';
           const msg = `${itemName} ${typeLabel} fiyatı ${fmt2(currentPrice)} TL ile hedef seviyenin ${condText}!`;
