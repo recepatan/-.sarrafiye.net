@@ -1,0 +1,85 @@
+name: Elazig Sitemap Guncelleyici
+
+on:
+  schedule:
+    - cron: '5 0 * * *' # Her gün UTC 00:05'te çalışır
+  workflow_dispatch:
+
+jobs:
+  update-sitemap:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Depoyu Klonla
+        uses: actions/checkout@v4
+
+      - name: Python Ortamı Kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Sitemap Güncelle
+        run: |
+          python -c "
+          import os
+          from datetime import datetime, timezone, timedelta
+          import xml.etree.ElementTree as ET
+
+          filename = 'elazig-altin-fiyatlari-arsivi-sitemap.xml'
+
+          if not os.path.exists(filename):
+              print(f'Hata: {filename} dosyası bulunamadı!')
+              exit(1)
+
+          # Namespace tanıtımı (XML parse ederken sorun yaşamamak için)
+          ns = {'ns': 'http://www.sitemaps.org/schemas/sitemap/0.9'}
+          ET.register_namespace('', 'http://www.sitemaps.org/schemas/sitemap/0.9')
+
+          tree = ET.parse(filename)
+          root = tree.getroot()
+
+          # Türkiye saatine göre bugünün tarihi (yyyy-aa-gg)
+          tr_time = datetime.now(timezone.utc) + timedelta(hours=3)
+          today_str = tr_time.strftime('%Y-%m-%d')
+          target_url = f'https://elazig.sarrafiye.net/altinfiyatlari?tarih={today_str}'
+
+          # Mevcut URL'leri kontrol et, bu tarih zaten var mı?
+          exists = False
+          for url_elem in root.findall('ns:url', ns):
+              loc_elem = url_elem.find('ns:loc', ns)
+              if loc_elem is not None and loc_elem.text and loc_elem.text.strip() == target_url:
+                  exists = True
+                  break
+
+          if not exists:
+              # Yeni url düğümünü oluştur
+              new_url = ET.Element('url')
+
+              loc = ET.SubElement(new_url, 'loc')
+              loc.text = target_url
+
+              changefreq = ET.SubElement(new_url, 'changefreq')
+              changefreq.text = 'daily'
+
+              priority = ET.SubElement(new_url, 'priority')
+              priority.text = '0.8'
+
+              # Kök elemente yeni url'yi ekle
+              root.append(new_url)
+              print(f'Yeni tarihli link eklendi: {target_url}')
+          else:
+              print(f'Bugünün tarihi ({today_str}) sitemap içinde zaten mevcut.')
+
+          # Dosyayı orijinal yapı ve formatı bozmadan kaydet
+          tree.write(filename, encoding='utf-8', xml_declaration=True)
+          print(f'{filename} başarıyla güncellendi.')
+          "
+
+      - name: Değişiklikleri GitHub'a Kaydet
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add elazig-altin-fiyatlari-arsivi-sitemap.xml
+          git commit -m "Elazig sitemap guncellendi: Bugunun tarihli arsiv linki eklendi." || exit 0
+          git push
