@@ -1122,7 +1122,7 @@
               const linkKutusu = document.getElementById('dinamik-arsiv-link');
 
               if (linkKutusu) {
-                linkKutusu.href = `https://elazig.sarrafiye.net/arsiv?tarih=${sqlTarih}`;
+                linkKutusu.href = `https://elazig.sarrafiye.net/altinfiyatlari?tarih=${sqlTarih}`;
                 linkKutusu.title = `${goruntuTarihi} Elazığ Altın Fiyatları Arşiv Ekranına Git`;
               }
             })();
@@ -2136,7 +2136,7 @@
       kurTr.dataset.key = 'KUR';
       if (selectedProductKey === 'KUR') kurTr.classList.add('active-row');
       kurTr.innerHTML = `
-        <td style="font-weight: bold;" title="KUR" onclick="window.location.href='arsiv?urun=kur'">KUR</td>
+        <td style="font-weight: bold;" title="KUR" onclick="window.location.href='altinfiyatlari?urun=kur'">KUR</td>
         <td style="color:#2563eb; font-weight:bold; text-align:center;" title="KUR Alış"><span id="val_kur_buy" class="val_haremalis">0,00</span></td>
         <td style="color:#d97706; font-weight:bold; text-align:center;" title="KUR Satış"><span id="val_kur_sell" class="val_haremsatis">0,00</span></td>
       `;
@@ -2230,7 +2230,7 @@
         const productSlug = slugify(item.name);
 
         tr.innerHTML = `
-          <td style="font-weight: bold;" title="${item.name}" onclick="window.location.href='arsiv?urun=${productSlug}'">${item.name}</td>
+          <td style="font-weight: bold;" title="${item.name}" onclick="window.location.href='altinfiyatlari?urun=${productSlug}'">${item.name}</td>
           <td style="color:#2563eb; font-weight:bold; text-align:center;" title="${item.name} Alış"><span id="val_g${groupIdx}_${itemIdx}_buy" class="${valClassBuy}">0</span></td>
           <td style="color:#d97706; font-weight:bold; text-align:center;" title="${item.name} Satış"><span id="val_g${groupIdx}_${itemIdx}_sell" class="${valClassSell}">0</span></td>
         `;
