@@ -1027,8 +1027,8 @@
         document.documentElement.style.setProperty('--border', borderColor); 
         const themeMeta = document.querySelector('meta[name="theme-color"]');
         if (themeMeta) themeMeta.setAttribute('content', mainColor);
-        localStorage.setItem('secilen_ana_renk', mainColor);
-        localStorage.setItem('secilen_kenar_renk', borderColor);
+        localStorage.setItem('secilen_ana_renk_v2', mainColor);
+        localStorage.setItem('secilen_kenar_renk_v2', borderColor);
         document.getElementById('paletteDropdown')?.classList.remove('show');
     }
 
@@ -1345,8 +1345,8 @@
     const currentCityDisplayName = cityNamesMap[currentCitySlug] || (currentCitySlug.charAt(0).toUpperCase() + currentCitySlug.slice(1));
 
     document.addEventListener('DOMContentLoaded', () => {
-      var kayitliAnaRenk = localStorage.getItem('secilen_ana_renk') || '#5c1a1b';
-      var kayitliKenarRenk = localStorage.getItem('secilen_kenar_renk') || '#f59e0b';
+      var kayitliAnaRenk = localStorage.getItem('secilen_ana_renk_v2') || '#5c1a1b';
+      var kayitliKenarRenk = localStorage.getItem('secilen_kenar_renk_v2') || '#f59e0b';
       document.documentElement.style.setProperty('--main', kayitliAnaRenk);
       document.documentElement.style.setProperty('--border', kayitliKenarRenk);
       const themeMeta = document.querySelector('meta[name="theme-color"]');
