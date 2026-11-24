@@ -7,7 +7,7 @@
   <title id="pageMetaTitle">Elazığ Altın Fiyatları</title>
   <link href="https://elazig.sarrafiye.net/favicon.ico" rel="icon" type="image/x-icon"/>
   <link href="https://elazig.sarrafiye.net/" rel="canonical"/>
-  <meta content="#fd3a13" name="theme-color"/>
+  <meta content="#5c1a1b" name="theme-color"/>
   <meta content="Elazığ kuyumcu esnaflarından derlenen Elazığ Canlı Altın Fiyatları için web sitemizi ziyaret edebilirsiniz." id="metaDescription" name="description"/>
   <meta property="og:locale" content="tr_TR"/>
   <meta property="og:type" content="website"/>
@@ -60,8 +60,8 @@
     .cookie-choices-info { display: none !important; }
     
     :root {
-      --main: #008a07;
-      --border: #ffa500;
+      --main: #5c1a1b;
+      --border: #f59e0b;
       --bg-gradient: radial-gradient(circle, #1a1a1a 0%, #000 100%);
     }
 
@@ -676,7 +676,7 @@
 
     body.dark-mode #desktop-calc-content,
     body.dark-mode #desktop-news-content,
-    body.dark-mode #desktop-calc-body,
+    body:not(.dark-mode) #desktop-calc-body,
     body.dark-mode #desktop-news-body {
       background: #18181b !important;
       color: #f4f4e5 !important;
@@ -1134,13 +1134,13 @@
               <i class="bi bi-palette"></i>
             </button>
             <div id="paletteDropdown" class="palette-dropdown">
+              <div class="dot" style="background:#5c1a1b" onclick="setT('#5c1a1b','#f59e0b')" title="Koyu Bordo & Kehribar"></div>
               <div class="dot" style="background:#008a07" onclick="setT('#008a07','#ffa500')" title="Zümrüt Yeşili"></div>
               <div class="dot" style="background:#b22222" onclick="setT('#b22222','#ffd700')" title="Yakut Kırmızısı"></div>
               <div class="dot" style="background:#4b0082" onclick="setT('#4b0082','#da70d6')" title="Kraliyet Moru"></div>
               <div class="dot" style="background:#444" onclick="setT('#444','#888')" title="Antrasit Gri"></div>
               <div class="dot" style="background:#0f3460" onclick="setT('#0f3460','#38bdf8')" title="Gece Laciverti"></div>
               <div class="dot" style="background:#0d5c63" onclick="setT('#0d5c63','#2dd4bf')" title="Petrol Turkuazı"></div>
-              <div class="dot" style="background:#5c1a1b" onclick="setT('#5c1a1b','#f59e0b')" title="Koyu Bordo & Kehribar"></div>
             </div>
           </div>
 
@@ -1899,8 +1899,8 @@
     function setT(mainColor, borderColor) {
       document.documentElement.style.setProperty('--main', mainColor);
       document.documentElement.style.setProperty('--border', borderColor);
-      localStorage.setItem('secilen_ana_renk', mainColor);
-      localStorage.setItem('secilen_kenar_renk', borderColor);
+      localStorage.setItem('secilen_ana_renk_v2', mainColor);
+      localStorage.setItem('secilen_kenar_renk_v2', borderColor);
       document.getElementById('paletteDropdown')?.classList.remove('show');
     }
 
@@ -2690,8 +2690,8 @@
         document.getElementById('dark_toggle_btn').innerText = '🌙';
       }
 
-      const mainColor = localStorage.getItem('secilen_ana_renk');
-      const borderColor = localStorage.getItem('secilen_kenar_renk');
+      const mainColor = localStorage.getItem('secilen_ana_renk_v2');
+      const borderColor = localStorage.getItem('secilen_kenar_renk_v2');
       if (mainColor && borderColor) setT(mainColor, borderColor);
 
       initData();
