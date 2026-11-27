@@ -278,9 +278,12 @@
   
   .chart-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:3px;flex-shrink:0;}
   .chart-title{font-size:clamp(11px, 1.05vw, 14px);font-weight:bold;color:var(--border);}
-  .time-filter-group{display:flex;gap:2px;flex-wrap:wrap;}
-  .time-btn{background-color:rgba(255,255,255,0.1);border:1px solid var(--border);color:#fff;padding:2px 5px;border-radius:3px;font-size:clamp(9px, 0.75vw, 11px);font-weight:bold;cursor:pointer;}
+  .time-filter-group{display:flex;gap:2px;flex-wrap:wrap;align-items:center;}
+  .time-btn{background-color:rgba(255,255,255,0.1);border:1px solid var(--border);color:#fff;padding:2px 5px;border-radius:3px;font-size:clamp(9px, 0.75vw, 11px);font-weight:bold;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:3px;}
   .time-btn:hover,.time-btn.active{background-color:var(--main);color:#ffffff;}
+  .time-btn.canli-btn{border-color:#22c55e;color:#4ade80;}
+  .time-btn.canli-btn:hover,.time-btn.canli-btn.active{background-color:#15803d;border-color:#22c55e;color:#ffffff;}
+  .canli-dot{width:6px;height:6px;border-radius:50%;background-color:#22c55e;display:inline-block;animation:blinker 1.2s linear infinite;}
   .chart-container{position:relative;width:100%;flex:1;min-height:0;background:rgba(0,0,0,0.2);border-radius:4px;padding:2px;}
   
   .seo-info-card{padding:5px 8px;background:rgba(0, 0, 0, 0.5);border:1px solid var(--border);border-left:4px solid var(--main);border-radius:5px;flex-shrink:0;}
@@ -683,12 +686,13 @@
                 <!-- 1. ALAN: Grafik ve Altında Dinamik Bilgi Kartı -->
                 <div class="left-column">
                     <div class="chart-box">
-                        <div class="chart-notice-blink">
+                        <div class="chart-notice-blink" id="chartNoticeBlink">
                             Arşiv ekranındasınız! Canlı ekran için <a href="/">tıklayınız</a>.
                         </div>
                         <div class="chart-header">
                             <div class="chart-title" id="chartTitle">Fiyat Trend Grafiği</div>
                             <div class="time-filter-group">
+                                <a href="?tip=canli" id="btnCanliGrafik" class="time-btn canli-btn" onclick="activateLiveMode(event)"><span class="canli-dot"></span>CANLI</a>
                                 <button class="time-btn" onclick="setChartRange('today', event)">1G</button>
                                 <button class="time-btn" onclick="setChartRange('week', event)">1H</button>
                                 <button class="time-btn active" onclick="setChartRange('month', event)">1A</button>
@@ -1417,6 +1421,7 @@
     }
 
     let archiveData = null;
+    let liveChartSessionData = []; // Sadece canlı modda sıfırdan biriken veriler
     let multipliers = {};
     let socketSettings = {};
     let priceChart = null;
@@ -1544,6 +1549,134 @@
       return parseGoogleSheetsData(v);
     }
 
+    function activateLiveMode(evt) {
+      if (evt) evt.preventDefault();
+      const params = new URLSearchParams(window.location.search);
+      params.set('tip', 'canli');
+      params.delete('tarih');
+      const newUrl = `${window.location.pathname}?${params.toString()}`;
+      window.history.pushState({ path: newUrl }, '', newUrl);
+      initData();
+    }
+
+    function initEmptyLiveChart() {
+      const prodDisplay = selectedProductKey === 'KUR' ? 'KUR' : (multipliers[selectedProductKey]?.name || 'KUR');
+      if (chartTitle) chartTitle.innerText = `${prodDisplay} Canlı Fiyat Grafiği (Veri Bekleniyor...)`;
+
+      const ctx = document.getElementById('priceChart').getContext('2d');
+      if (priceChart) priceChart.destroy();
+      priceChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            {
+              label: `Satış (TL)`,
+              data: [],
+              borderColor: '#d97706',
+              backgroundColor: 'rgba(217, 119, 6, 0.1)',
+              borderWidth: 2,
+              fill: true,
+              tension: 0.3,
+              pointRadius: 3
+            },
+            {
+              label: `Alış (TL)`,
+              data: [],
+              borderColor: '#2563eb',
+              backgroundColor: 'rgba(37, 99, 235, 0.1)',
+              borderWidth: 2,
+              fill: true,
+              tension: 0.3,
+              pointRadius: 3
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              callbacks: { label: function(context) { return `${context.dataset.label}: ${fmt(context.raw)} TL`; } }
+            }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { maxTicksLimit: 8, color: '#ccc', font: { size: 10 } } },
+            y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#ccc', font: { size: 10 }, callback: function(value) { return fmt(value) + ' TL'; } } }
+          }
+        }
+      });
+    }
+
+    function renderLiveSessionChart() {
+      const prodDisplay = selectedProductKey === 'KUR' ? 'KUR' : (multipliers[selectedProductKey]?.name || 'KUR');
+      if (chartTitle) chartTitle.innerText = `${prodDisplay} Canlı Fiyat Grafiği`;
+
+      const labels = liveChartSessionData.map(item => item.saat);
+      let alisData = [];
+      let satisData = [];
+
+      if (selectedProductKey === 'KUR') {
+        alisData = liveChartSessionData.map(item => item.satis);
+        satisData = liveChartSessionData.map(item => item.satis);
+      } else {
+        const selectedProd = multipliers[selectedProductKey];
+        if (!selectedProd) return;
+        alisData = liveChartSessionData.map(item => item.satis * selectedProd.mAl);
+        satisData = liveChartSessionData.map(item => item.satis * selectedProd.mSat);
+      }
+
+      const ctx = document.getElementById('priceChart').getContext('2d');
+      if (priceChart) priceChart.destroy();
+      priceChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: `Satış (TL)`,
+              data: satisData,
+              borderColor: '#d97706',
+              backgroundColor: 'rgba(217, 119, 6, 0.1)',
+              borderWidth: 2,
+              fill: true,
+              tension: 0.3,
+              pointRadius: liveChartSessionData.length > 90 ? 0 : 3
+            },
+            {
+              label: `Alış (TL)`,
+              data: alisData,
+              borderColor: '#2563eb',
+              backgroundColor: 'rgba(37, 99, 235, 0.1)',
+              borderWidth: 2,
+              fill: true,
+              tension: 0.3,
+              pointRadius: liveChartSessionData.length > 90 ? 0 : 3
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              callbacks: { label: function(context) { return `${context.dataset.label}: ${fmt(context.raw)} TL`; } }
+            }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { maxTicksLimit: 8, color: '#ccc', font: { size: 10 } } },
+            y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#ccc', font: { size: 10 }, callback: function(value) { return fmt(value) + ' TL'; } } }
+          }
+        }
+      });
+    }
+
     async function initData() {
       try {
         const urlParams = getUrlParams();
@@ -1552,7 +1685,7 @@
         statusDiv.className = 'status-msg';
         statusDiv.innerText = 'Veriler yükleniyor...';
         
-        if (!archiveData) {
+        if (!archiveData && urlParams.tip !== 'canli') {
           const archiveRes = await fetch('https://api.sarrafiye.net/altin_arsiv.json');
           if (!archiveRes.ok) throw new Error('Arşiv verisi alınamadı.');
           archiveData = await archiveRes.json();
@@ -1580,30 +1713,57 @@
         }
         fullscreenProductSelect.value = selectedProductKey;
 
-        datePicker.disabled = false;
-        let targetDate = '';
+        const noticeEl = document.getElementById('chartNoticeBlink');
 
         if (urlParams.tip === 'canli') {
           window.isLiveSocketActive = true;
-          currentRange = 'month';
-          document.querySelectorAll('.time-btn').forEach(btn => btn.classList.remove('active'));
-          const monthBtn = Array.from(document.querySelectorAll('.time-btn')).find(b => b.getAttribute('onclick')?.includes('month'));
-          if (monthBtn) monthBtn.classList.add('active');
+          liveChartSessionData = []; // Canlı grafik tamamen sıfırdan başlar, arşiv verisi alınmaz
+          currentRecordIndex = -1;
 
-          if (archiveData.length > 0) {
-            const lastItem = archiveData[archiveData.length - 1];
-            targetDate = normalizeToISO(lastItem.tarih || lastItem.date || lastItem.Tarih);
+          document.querySelectorAll('.time-btn').forEach(btn => btn.classList.remove('active'));
+          const canliBtn = document.getElementById('btnCanliGrafik');
+          if (canliBtn) canliBtn.classList.add('active');
+
+          if (noticeEl) {
+            noticeEl.innerHTML = `Canlı piyasa ekranındasınız! Arşiv için <a href="${window.location.pathname}">tıklayınız</a>.`;
           }
-          handleDateChange(targetDate, '', false, false);
+
+          const todayIso = new Date().toISOString().split('T')[0];
+          if (dateTextValue) dateTextValue.innerText = formatDateTR(todayIso);
+          if (datePicker) {
+            datePicker.value = todayIso;
+            datePicker.disabled = true;
+          }
+          if (timeSelect) {
+            timeSelect.innerHTML = '<option value="">Canlı</option>';
+            timeSelect.disabled = true;
+          }
+
+          statusDiv.style.display = 'none';
+          resultsDiv.style.display = 'flex';
+
+          updateTablesOnly(0, 0);
+          initEmptyLiveChart();
           connectSocket();
         } else {
           window.isLiveSocketActive = false;
+          if (socket) { socket.off(); socket.disconnect(); socket = null; }
+          datePicker.disabled = false;
+
+          const canliBtn = document.getElementById('btnCanliGrafik');
+          if (canliBtn) canliBtn.classList.remove('active');
+
+          if (noticeEl) {
+            noticeEl.innerHTML = `Arşiv ekranındasınız! Canlı ekran için <a href="/">tıklayınız</a>.`;
+          }
+
+          let targetDate = '';
           if (urlParams.tarih) {
             targetDate = urlParams.tarih;
             datePicker.value = targetDate;
             handleDateChange(targetDate, '', false, false);
           } else {
-            if (archiveData.length > 0) {
+            if (archiveData && archiveData.length > 0) {
               const lastItem = archiveData[archiveData.length - 1];
               targetDate = normalizeToISO(lastItem.tarih || lastItem.date || lastItem.Tarih);
               datePicker.value = targetDate;
@@ -1632,7 +1792,7 @@
     }
 
     function handleLiveSocketData(rec_data) {
-      if (!window.isLiveSocketActive || !archiveData || archiveData.length === 0) return;
+      if (!window.isLiveSocketActive) return;
       var data = rec_data.data;
       if (!data || !data["ALTIN"]) return;
 
@@ -1656,28 +1816,30 @@
       var z = document.getElementById('fiyat_zaman_doviz');
       if(z) z.innerText = timeStr;
 
-      var lastItem = archiveData[archiveData.length - 1];
-      var currentDate = lastItem ? normalizeToISO(lastItem.tarih || lastItem.date || lastItem.Tarih) : new Date().toISOString().split('T')[0];
+      var currentDate = new Date().toISOString().split('T')[0];
 
-      var newRecord = {
+      liveChartSessionData.push({
         tarih: currentDate,
         saat: timeStr,
         alis: h_al,
         satis: h_sat
-      };
-      archiveData.push(newRecord);
-      currentRecordIndex = archiveData.length - 1;
+      });
+
+      if (liveChartSessionData.length > 1000) {
+        liveChartSessionData.shift();
+      }
 
       updateTablesOnly(h_al, h_sat);
+
+      const prodDisplay = selectedProductKey === 'KUR' ? 'KUR' : (multipliers[selectedProductKey]?.name || 'KUR');
+      if (chartTitle) chartTitle.innerText = `${prodDisplay} Canlı Fiyat Grafiği`;
 
       if (priceChart && priceChart.data && priceChart.data.datasets.length >= 2) {
         const selectedProd = selectedProductKey === 'KUR' ? null : multipliers[selectedProductKey];
         const calcAlis = selectedProd ? h_sat * selectedProd.mAl : h_sat;
         const calcSatis = selectedProd ? h_sat * selectedProd.mSat : h_sat;
 
-        const labelStr = (currentRange === 'today') ? timeStr : `${currentDate} ${timeStr}`;
-
-        priceChart.data.labels.push(labelStr);
+        priceChart.data.labels.push(timeStr);
         priceChart.data.datasets[0].data.push(calcSatis);
         priceChart.data.datasets[1].data.push(calcAlis);
 
@@ -1689,7 +1851,7 @@
 
         priceChart.update('none');
       } else {
-        renderChart();
+        renderLiveSessionChart();
       }
 
       updatePageSEO(currentDate, timeStr, h_al, h_sat);
@@ -1750,7 +1912,12 @@
       const urlParams = getUrlParams();
       const hasDateParam = Boolean(urlParams.tarih);
 
-      if (isProductSpecific) {
+      if (window.isLiveSocketActive) {
+        pageTitleText = isProductSpecific 
+          ? `Canlı ${currentCityDisplayName} ${prodName} Fiyatları`
+          : `Canlı ${currentCityDisplayName} Altın Fiyatları`;
+        descText = `${currentCityDisplayName} kuyumcu esnafından anlık canlı ${prodName.toLowerCase()} alış ve satış fiyatları, canlı fiyat değişim grafiği.`;
+      } else if (isProductSpecific) {
         pageTitleText = `${currentCityDisplayName} ${prodName} Fiyatları Arşivi`;
         descText = `${currentCityDisplayName} ${prodName} fiyatları arşivi, güncel ve geçmiş dönem ${prodName.toLowerCase()} fiyat değişimleri, kuyumcu esnafından derlenen piyasa analizleri.`;
       } else if (!hasDateParam) {
@@ -1789,12 +1956,13 @@
       const makasTl = currentSell - currentBuy;
       const makasOran = currentBuy > 0 ? ((makasTl / currentBuy) * 100).toFixed(2) : '0.00';
 
-      const targetIsoDate = targetDateIso;
-      const daySlice = archiveData.filter(item => normalizeToISO(item.tarih || item.date || item.Tarih) === targetIsoDate);
+      const sourceList = window.isLiveSocketActive 
+        ? liveChartSessionData 
+        : (archiveData || []).filter(item => normalizeToISO(item.tarih || item.date || item.Tarih) === targetDateIso);
       
       let dayBuyVals = [];
       let daySellVals = [];
-      daySlice.forEach(item => {
+      sourceList.forEach(item => {
         let s = parseFloat(String(item.satis || item.sell || item.Satis || 0).replace(',', '.'));
         let b = s;
         if (selectedProductKey !== 'KUR' && multipliers[selectedProductKey]) {
@@ -1810,7 +1978,11 @@
       const minSell = daySellVals.length ? Math.min(...daySellVals) : currentSell;
       const maxSell = daySellVals.length ? Math.max(...daySellVals) : currentSell;
 
-      if (seoCardTitle) seoCardTitle.innerText = `📌 ${formattedDate} ${currentCityDisplayName} ${cardProdName} Arşivi`;
+      if (seoCardTitle) {
+        seoCardTitle.innerText = window.isLiveSocketActive 
+          ? `📌 Canlı ${currentCityDisplayName} ${cardProdName}`
+          : `📌 ${formattedDate} ${currentCityDisplayName} ${cardProdName} Arşivi`;
+      }
       if (seoCardContent) {
         seoCardContent.innerHTML = `${formattedDate}${timePart} itibarıyla ${currentCityDisplayName} kuyumcu esnafından derlenen <strong>${cardProdName}</strong>; Alış: <strong>${fmt(currentBuy)} TL</strong>, Satış: <strong>${fmt(currentSell)} TL</strong> (Makas Farkı: ${fmt(makasTl)} TL / %${makasOran}).`;
       }
@@ -1843,7 +2015,7 @@
             "priceCurrency": "TRY",
             "lowPrice": Math.round(minBuy),
             "highPrice": Math.round(maxSell),
-            "offerCount": daySlice.length || 1,
+            "offerCount": sourceList.length || 1,
             "offers": [
               {
                 "@type": "Offer",
@@ -1907,6 +2079,7 @@
 
         if (updateHistory) {
           const params = new URLSearchParams(window.location.search);
+          params.delete('tip');
           params.set('tarih', targetIso);
           if (selectedProductKey !== 'KUR') {
             params.set('urun', slugify(getSelectedProductName()));
@@ -1949,7 +2122,28 @@
         }
       }
 
-      if (currentRecordIndex !== -1 && archiveData[currentRecordIndex]) {
+      if (window.isLiveSocketActive) {
+        const params = new URLSearchParams(window.location.search);
+        params.set('tip', 'canli');
+        if (selectedProductKey !== 'KUR') {
+          params.set('urun', slugify(getSelectedProductName()));
+        } else {
+          params.delete('urun');
+        }
+        const newUrl = `${window.location.pathname}?${params.toString()}`;
+        window.history.pushState({ path: newUrl }, '', newUrl);
+
+        if (liveChartSessionData.length > 0) {
+          const lastLive = liveChartSessionData[liveChartSessionData.length - 1];
+          updatePageSEO(lastLive.tarih, lastLive.saat, lastLive.alis, lastLive.satis);
+          renderLiveSessionChart();
+        } else {
+          initEmptyLiveChart();
+        }
+        return;
+      }
+
+      if (currentRecordIndex !== -1 && archiveData && archiveData[currentRecordIndex]) {
         const record = archiveData[currentRecordIndex];
         const targetIso = normalizeToISO(record.tarih || record.date || record.Tarih);
         const rawBuy = parseFloat(String(record.alis || record.buy || record.Alis || 0).replace(',', '.'));
@@ -1970,10 +2164,38 @@
       renderChart();
     }
 
-    function setChartRange(range, evt) {
+    async function setChartRange(range, evt) {
       currentRange = range;
       document.querySelectorAll('.time-btn').forEach(btn => btn.classList.remove('active'));
       if (evt && evt.target) evt.target.classList.add('active');
+
+      // Canlı moddayken 1G/1H/1A/1Y/5Y butonlarına basılırsa arşiv moduna geç
+      if (window.isLiveSocketActive) {
+        window.isLiveSocketActive = false;
+        if (socket) { socket.off(); socket.disconnect(); socket = null; }
+        
+        const params = new URLSearchParams(window.location.search);
+        params.delete('tip');
+        const newUrl = params.toString() ? `${window.location.pathname}?${params.toString()}` : window.location.pathname;
+        window.history.pushState({ path: newUrl }, '', newUrl);
+
+        const noticeEl = document.getElementById('chartNoticeBlink');
+        if (noticeEl) noticeEl.innerHTML = `Arşiv ekranındasınız! Canlı ekran için <a href="/">tıklayınız</a>.`;
+
+        if (!archiveData) {
+          const archiveRes = await fetch('https://api.sarrafiye.net/altin_arsiv.json');
+          if (archiveRes.ok) archiveData = await archiveRes.json();
+        }
+        if (archiveData && archiveData.length > 0) {
+          const lastItem = archiveData[archiveData.length - 1];
+          const targetDate = normalizeToISO(lastItem.tarih || lastItem.date || lastItem.Tarih);
+          datePicker.disabled = false;
+          datePicker.value = targetDate;
+          handleDateChange(targetDate, '', false, false);
+        }
+        return;
+      }
+
       renderChart();
     }
 
@@ -2005,6 +2227,12 @@
     }
 
     function renderChart() {
+      if (window.isLiveSocketActive) {
+        if (liveChartSessionData.length > 0) renderLiveSessionChart();
+        else initEmptyLiveChart();
+        return;
+      }
+
       if (currentRecordIndex === -1 || !archiveData) return;
       let chartDisplayTitle = "";
       
